@@ -1,0 +1,193 @@
+Leçon 1:
+
+Dans le home.html.twig:
+{% if age > 18 %}
+<p> Tu es majeur </p>
+{% else %}
+<p>Tu es mineur</p>
+{% endif %}
+
+Dans le BlogController:
+ <?php
+ class BlogController extends AbstractController
+{
+    /** 
+     * @Route("/", name="home")
+    */
+    public function home() {
+        return $this->render('blog/home.html.twig', [ 
+            'title' => "Bienvenue ici les amis !",
+            'age' => 31
+        ]);
+    }
+}
+
+Leçon 2: Bootswatch
+
+
+Leçon 3:
+chaque jour, taper php -S 127.0.0.1:8000 -t public/  pour pouvoir utiliser symphony pour pouvoir visualiser sur le serveur le site
+
+
+Leçon 4: Doctrine
+
+Pour créere une base de données, dans le fichier .env il faut renommer la base de données mysql avec le nom de la base de données que l'on veut, 
+puis  dans le terminal il faut taper php bin/console doctrine:database:create 
+
+Pour créer une entité (une table) il faut taper dans le terminal php bin/console make:entity
+Lorsque l'on a crée les entités avec les propriétés, et que l'on a terminé, on tape php bin/console make:migration dans la console
+Puis on tape php bin/console doctrine:migrations:migrate pour mettre à jour la base de données 
+
+
+Leçon 5: ORM
+
+Ensuite pour installer ORM pour créer une fixture (créer un script pour insérer un jeu de fausses données) il faut taper composer require orm-fixtures --dev 
+Puis pour créer les fixtures, taper php bin/console make:fixtures
+Après avoir nommé notre fichier de fixtures, on va dans le dossier DataFixtures, et on va dans le fichier crée, puis dans la function load(ObjectManager $manager), 
+on remplace le commentaire par :
+for ($i = 1; $i <=10; $i++) {
+            $article = new Article();
+            $article->setTitle("Titre de l'article n°$i")
+                    ->setContent("<p>Contenu de l'article n°$i</p>")
+                    ->setImage("http://placehold.it/350x150")
+                    ->setCreatedAt(new \DateTime());
+
+pour pouvoir créer 10 faux articles avec titre, contenu, image, et la date et l'heure en direct. Aussi surtout ne pas oublier /!\ en haut au dessus de class ArticleFixtures, ajouter:
+use App\Entity\Article;
+car c'est l'emplacement du fichier Article (namespace)
+dans le for, il faut rajouter:
+$manager->persist($article); (afin de le faire persister dans le temps)
+
+Il est important de garder le flush en dessous du for pour que cela fonctionne
+le $manager va nous servir à ajouter, supprimer ou modifier nos articles 
+
+Quand tout ça est réalisé, il faut taper dans le terminal php bin/console doctrine:fixtures:load pour que les faux articles soient dans mysql dans ma base de données
+
+
+Leçon 6: comment relier les articles de la base de données individuellement au site 
+
+aller dans BlogController (le controller), dans public function index() , au dessus du return, écrire:
+$repo = $this->getDoctrine()->getRepository(Article::class); (/!\ comme on utilise la classe Article, ne pas oublier d'écrire en haut au dessus du class BlogController: use App\Entity\Article;)
+ensuite en dessous de $repo :
+$article = $repo->findAll();   (on peut trouver différents articles en fonction du find que l'on va écrire, exemples: find(12), findOneByTitle('Titre de l'article'), findByTitle('Titre de l'article))
+
+
+Dans le return en dessous de la function index, en dessous de 'controller_name' => 'BlogController', ajouter:
+'articles' => $articles
+
+Ensuite dans le fichier index dans templates et blog, on garde qu'un seul article, et entre <section class="articles"> et <article>, on écrit la boucle:
+{% for article in articles %} (Pour chaque article dans le tableau des articles, je veux afficher cet article là)
+Juste après le </article> on n'oublie pas le {% endfor %}
+
+Ensuite, toujours dans le document index, on remplace le titre entre <h2> par:
+{{ article.title }}
+
+Ensuite à la place des faux paragraphes, on va mettre:
+{{ article.content }}
+Ensuite à la suite de article content on écrit raw pour que le html s'affiche normalement
+{{ article.content | raw }}
+Pour l'image, on remplace le lien placehold par:
+"{{ article.image }}"
+
+A la place de la date on va mettre:
+{{ article.createdAt | date('d/m/Y') }}
+
+Pour l'heure:
+{{ article.createdAt | ('H:i') }}
+
+Ensuite, pour que dans "Lire la suite", on n'ait pas le même article, et donc les articles individuellement, dans BlogController, il faut remplacer le 12 après le blog dans le Route qui se trouve avant public function show:
+@Route("/blog/{id}", name="blog-show")
+
+Puis on modifie la function show de cette manière:
+
+public function show($id){
+        $repo = $this->getDoctrine()->getRepository(Article::class);
+
+        $article = $repo->find($id);
+
+        return $this->render('blog/show.html.twig', [
+            'article' => $article
+        ]);
+    }
+
+Dans le fichier show.html.twig, on change comme ça:
+<article>
+        <h2>{{ article.title }}</h2>
+        <div class="metadata">Ecrit le {{article.createdAt | date('d/m/Y')}} à {{article.createdAt | date('H:i')}} dans la catégorie Politique</div>
+        <div class="content">
+            <img src="{{ article.image }}" alt="">
+            {{ article.content | raw }} 
+        </div>
+    </article>
+
+Dans le fichier index, dans le path, on met un deuxième paramètre pour que tous les articles s'affichent correctement:
+ <a href="{{ path('blog_show', {'id' : article.id}) }}" class="btn-btn-primary">Lire la suite</a>
+
+ Leçon 7 : Injection de dépendance, service container 
+
+ Dans le fichier BlogController, ajouter dans public function index:
+ public function index(ArticleRepository $repo)
+
+ Puis en haut, entre les use et class BlogController, ajouter:
+ use App\Repository8ArticleRepository;
+
+ Toujours dans BlogController, on modifie la function show pour la simplifier:
+ public function show(Article $article){
+        
+
+        return $this->render('blog/show.html.twig', [
+            'article' => $article
+        ]);
+    }
+
+
+Leçon 8: Formulaire, création de la page create
+
+Dans le BlogController, ajouter :
+
+ /**
+     * @Route("/blog/new", name="blog_create")
+     */
+    public function create() {
+        return $this->render('blog/create.html.twig');
+
+    }
+
+    Entre la function home et la function show (il est important que notre nouvelle fonction se trouve au dessous de celle de show pour ne pas qu'il y ait de problème de route)
+    Ensuite, dans le dossier templates, et dans le dossier blog, on créer un fichier 'create.html.twig'
+    Dnas le fichier create on ajoute :
+    {% extends 'base.html.twig' %}
+
+{% block body %}
+
+    <h1>Création d'un article !</h1>
+
+{% endblock %}
+
+afin que la page create affiche quelque chose
+
+Ensuite dans base.html.twig, on change les liens dans href, pour que les liens fonctionnent, de cette manière:
+<a class="navbar-brand" href="{{ path('home') }}">Symblog</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarColor01" aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarColor01">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                <a class="nav-link" href="{{ path('blog') }}">Articles</a>
+                </li>
+                <li class="nav-item">
+                <a class="nav-link" href="{{ path('blog_create') }}">Créer un article</a>
+                </li>
+
+                (avec les path dans les href)
+
+
+
+
+    Leçon 10 : PHP Storm
+
+  Dans PHP Storm, ouvrir une page php, cliquer sur le logo PHP Storm, cliquer sur le database puis sur Data Source puis sur MySQL 
+  Ensuite dans Wamp, dans outils, vérifier quez se soit le bon port 
+  Celà permet de pouvoir gérer sa base de données directement sur php storm 
