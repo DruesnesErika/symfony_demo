@@ -183,11 +183,563 @@ Ensuite dans base.html.twig, on change les liens dans href, pour que les liens f
 
                 (avec les path dans les href)
 
+Ensuite dans le fichier BlogController, on modifie la function create de cette manière:
+ public function create() {
+        $article = new Article();
+
+        $form = $this->createFormBuilder($article)
+                     ->add('title')
+                     ->add('content')
+                     ->add('image')
+                     ->getForm();
+
+        return $this->render('blog/create.html.twig', [
+            'formArticle' => $form->createView()
+        ]);
+
+        Ensuite dans le fichier create.html.twig, on ajoute entre Création d'un article et le endblock ceci:
+
+          <h1>Création d'un article !</h1>
+
+    {{ form(formArticle) }}
+
+{% endblock %}
+
+Si par exemple nous voulons changer le type de formulaire d'un champ, dans le BlogController on peut par exemple modifier le type de cette manière:
+
+$form = $this->createFormBuilder($article)
+             ->add('title')
+             ->add('content', TextType::class)
+
+Pour voir les autres types de champs pour un formulaire, on eput aller voir dans la documentation de Symfony sur symfony.com/doc/current/forms.html
+Mais si on modifie le type, il faut rajouter un use en haut de la page que l'on trouve également dans la documentation, pour notre cas se serait:
+
+use Symfony\Component\Form\Extension\Core\Type\TextType;
+
+Pour notre exemple nous allons ajouter ceci entre le lien Route et le lien Article, comme ceci:
+use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Extension\Core\Type\TextareaType;
+use App\Entity\Article;
+
+Ensuite dans la function create, on ajoute des placeholders comme ceci:
+public function create() {
+        $article = new Article();
+
+        $form = $this->createFormBuilder($article)
+                     ->add('title', TextType::class, [
+                         'attr' => [
+                             'placeholder' => "Titre de l'article",
+                             'class' => 'form-control'
+                         ]
+                     ])
+                     ->add('content', TextareaType::class, [
+                         'attr' => [
+                             'placeholder' => "Contenu de l'article",
+                             'class' => 'form-control'
+                         ]
+                     ])
+                     ->add('image', TextType::class, [
+                         'attr' => [
+                             'placeholder' => "Image de l'article",
+                             'class' => 'form-control
+                         ]
+                     ])
+                     ->getForm();
+
+(le form control permet d'afficher le formulaire en Bootstrap propre)
+
+Ensuite dans le fichier create on met à jour entre Création d'un article et endblock comme ceci:
+
+ <h1>Création d'un article !</h1>
+
+    {{ form_start(formArticle) }}
+
+    <div class="form-group">
+        <label for="">Titre</label>
+        {{ form_widget(formArticle.title) }}
+    </div>
+
+    <div class="form-group">
+        <label for="">Contenu</label>
+        {{ form_widget(formArticle.content) }}
+    </div>
+
+    <div class="form-group">
+        <label for="">Image</label>
+        {{ form_widget(formArticle.image) }}
+    </div>
+
+    {{ form_end(formArticle) }}
+
+{% endblock %}
 
 
 
-    Leçon 10 : PHP Storm
+(Leçon à part : PHP Storm
 
   Dans PHP Storm, ouvrir une page php, cliquer sur le logo PHP Storm, cliquer sur le database puis sur Data Source puis sur MySQL 
   Ensuite dans Wamp, dans outils, vérifier quez se soit le bon port 
-  Celà permet de pouvoir gérer sa base de données directement sur php storm 
+  Celà permet de pouvoir gérer sa base de données directement sur php storm )
+
+
+  Leçon 10: Les templates
+
+  On a la possibilité de réduire le code, pour cela il faut effacer cette partie du fichier create: 
+
+  <div class="form-group">
+        <label for="">Titre</label>
+        {{ form_widget(formArticle.title) }}
+    </div>
+
+    <div class="form-group">
+        <label for="">Contenu</label>
+        {{ form_widget(formArticle.content) }}
+    </div>
+
+    <div class="form-group">
+        <label for="">Image</label>
+        {{ form_widget(formArticle.image) }}
+    </div>
+
+    Et ajouter entre form_start et form_end ceci:
+
+    {{ form_start(formArticle) }}
+
+    {{ form_widget(formArticle) }}
+
+    {{ form_end(formArticle) }}
+
+    Ensuite dans le BlogController, on supprime les class form control comme ceci: 
+
+      $form = $this->createFormBuilder($article)
+                     ->add('title', TextType::class, [
+                         'attr' => [
+                             'placeholder' => "Titre de l'article"
+                        ]
+                    ])
+
+                     ->add('content', TextareaType::class, [
+                         'attr' => [
+                             'placeholder' => "Contenu de l'article"
+                             
+                         ]
+                     ])
+                     ->add('image', TextType::class, [
+                         'attr' => [
+                             'placeholder' => "Image de l'article"
+                             
+                         ]
+                     ])
+                     ->getForm();
+
+Ensuite on ajoute un thème bootstrap, pour cela on va dans la documentation de symfony (le lien : https://symfony.com/doc/current/forms.html#form-types), on copie colle ceci:
+
+twig:
+    form_themes: ['bootstrap_4_layout.html.twig']
+
+    On le colle dans config, packages dabs le document twig.yaml (on oublie pas d'effacer le "twig:" s'il y est déjà)
+
+Ensuite dans le document create, juste en dessous du extends, on rajoute ceci :
+
+{% extends 'base.html.twig' %}
+
+{% form_theme formArticle 'bootstrap_4_layout.html.twig' %}
+
+{% block body %}
+
+    <h1>Création d'un article !</h1>
+
+    {{ form_start(formArticle) }}
+
+    {{ form_widget(formArticle) }}
+
+    {{ form_end(formArticle) }}
+
+{% endblock %}
+
+Leçon 11: Création d'un bouton submit 
+
+/!\ La première méthode que l'on va voir n'est pas très utilisée (car pas très pratique, surtout si l'on veut modifier par la suite un article)
+Première méthode: 
+Dans le BlogController, rajouter un add save pour submit, juste après le add de l'image comme ceci:
+$form = $this->createFormBuilder($article)
+                     ->add('title', TextType::class, [
+                         'attr' => [
+                             'placeholder' => "Titre de l'article"
+                        ]
+                    ])
+
+                     ->add('content', TextareaType::class, [
+                         'attr' => [
+                             'placeholder' => "Contenu de l'article"
+                             
+                         ]
+                     ])
+                     ->add('image', TextType::class, [
+                         'attr' => [
+                             'placeholder' => "Image de l'article"
+                             
+                         ]
+                     ])
+                     ->add('save', SubmitType::class, [
+                         'label' => 'Enregistrer'
+                     ])
+                     ->getForm();
+
+        return $this->render('blog/create.html.twig', [
+            'formArticle' => $form->createView()
+        ]);
+
+Puis en haut ne pas oublier le use pour le submit juste après le textareatype:
+
+use Symfony\Component\Form\Extension\Core\Type\SubmitType;
+
+Deuxième méthode: 
+
+On ajoute tout simplement un button submit dans le fichier create entre le form_widget et le form_end comme ceci: 
+
+ <button type="submit" class="btn btn-success">Ajouter l'article</button>
+
+ Leçon 12: Séparation du code
+
+ Pour rendre le code plus propre, dans le fichier BlogController on réduit la public function create comme ceci:
+
+     public function create() {
+        $article = new Article();
+
+        $form = $this->createFormBuilder($article)
+                     ->add('title')
+                     ->add('content')
+                     ->add('image')
+                     ->getForm();
+
+        return $this->render('blog/create.html.twig', [
+            'formArticle' => $form->createView()
+        ]);
+
+    }
+
+Ensuite dans le fichier create, on remplace le form_widget par des form_row comme ceci: 
+ <h1>Création d'un article !</h1>
+
+    {{ form_start(formArticle) }}
+
+    {{ form_row(formArticle.title, {'attr': {'placeholder': "Titre de l'article"}}) }}
+    {{ form_row(formArticle.content, {'attr': {'placeholder' : "Contenu de m'article"}}) }}
+    {{ form_row(formArticle.image, {'attr' : {'placeholder': "URL de l'image"}}) }}
+
+    <button type="submit" class="btn btn-success">Ajouter l'article</button>
+
+    {{ form_end(formArticle) }}
+
+    Leçon 13: Traiter le form
+
+    Dans le BlogController, dans la public function create, on rajoute un handleRequest ainsi qu'un if :
+    public function create() {
+        $article = new Article();
+
+        $form = $this->createFormBuilder($article)
+                     ->add('title')
+                     ->add('content')
+                     ->add('image')
+                     ->getForm();
+
+    
+        $form->handleRequest($request);
+
+        if($form->isSubmitted() && $form->isValid()) {
+            $article->setCreatedAt(new \DateTime());
+
+            $manager->persist($article);
+            $manager->flush();
+
+            return $this->redirectToRoute('blog_show', ['id' => $article->getId()]);
+        }
+
+
+Ensuite dans le BlogController, ajouter deux use en haut et modifier les parametres du public function create pour éviter plusieurs code erreur, pour les use:
+
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Extension\Core\Type\TextareaType;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\HttpFoundation\Request;
+
+use App\Entity\Article;
+use App\Repository\ArticleRepository;
+
+class BlogController extends AbstractController
+{
+
+    les use à rajouter sont:
+
+use Doctrine\ORM\EntityManagerInterface;
+
+et:
+
+use Symfony\Component\HttpFoundation\Request;
+
+Pour les paramètres, il faut modifier la function create de cette manière: 
+public function create(Request $request, EntityManagerInterface $manager) {
+        $article = new Article();
+
+        $form = $this->createFormBuilder($article)
+                     ->add('title')
+                     ->add('content')
+                     ->add('image')
+                     ->getForm();
+
+Leçon 14: La mise à jour (modification de l'article)
+
+Dans BlogController, on rajoute une route, et on transforme la function create en function form comme ceci:
+/**
+     * @Route("/blog/new", name="blog_create")
+     * @Route("/blog/{id}/edit", name="blog_edit")
+     */
+    public function form(Article $article = null, Request $request, EntityManagerInterface $manager) {
+
+        if(!$article) {
+            $article = new Article();
+        }
+ 
+        $form = $this->createFormBuilder($article)
+                     ->add('title')
+                     ->add('content')
+                     ->add('image')
+                     ->getForm();
+
+
+Ensuite en dessous on fait également quelques changements pour créer le bouton de modification :
+
+$form->handleRequest($request);
+
+        if($form->isSubmitted() && $form->isValid()) {
+            if(!$article->getId()) {
+                $article->setCreatedAt(new \DateTime());
+            }
+
+            $manager->persist($article);
+            $manager->flush();
+
+            return $this->redirectToRoute('blog_show', ['id' => $article->getId()]);
+        }
+
+        return $this->render('blog/create.html.twig', [
+            'formArticle' => $form->createView(),
+            'editMode' => $article->getId() !== null
+        ]);
+
+        Puis dans le fichier create, on change le bouton submit comme ceci, afin que l'on puisse créer un bouton de modification sur la page edit:
+
+         <button type="submit" class="btn btn-success">
+        {% if editMode %}
+            Enregistrer les modifications
+        {% else %}
+            Ajouter l'article
+        {% endif %}
+    </button>
+
+    {{ form_end(formArticle) }}
+
+{% endblock %}
+
+Leçon 15: la mise à jour automatique avec la console
+
+Il faut taper dans le terminal de commande :
+
+php bin/console make:form 
+
+Ensuite le terminal demande le nom du formulaire que l'on veut faire (/!\ le nom d'un formulaire fini normalement par Type), dans notre exercice nous allons l'appeler ArticleType
+
+Ensuite le terminal demande sur quelle entité le formulaire se base? Nous allons donc répondre Article 
+
+Puis le terminal va créer tout seul un formulaire qui se trouve dans Form et qui s'appelle ArticleType 
+
+Dans ArticleType on enlève dans le $builder le ->add('createdAt') cat pour notre exercice nous n'en avons pasz besoin (même s'il pourrait être utile)
+
+Ensuite on retourne dans le BlogController, on passe en commentaire ceci (ou on le supprime):
+
+ $form = $this->createFormBuilder($article)
+                     ->add('title')
+                     ->add('content')
+                     ->add('image')
+                     ->getForm();
+
+Et juste en dessous on ajoute: 
+
+ $form = $this->createForm(ArticleType::class, $article);
+
+Et tout en haut on ajoute un nouveau use en dessous de use App\Repository\ArticleRepository; :
+
+use App\Form\ArticleType;
+
+Leçon 16: La validation
+
+Dans le dossier Entity, aller sur le fichier Article.php, ajouter un use comme ceci:
+
+use App\Repository\ArticleRepository;
+use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
+
+c'est use Symfony\Component\Validator\Constraints as Assert; que l'on vient d'ajouter
+
+Ensuite on peut retrouver les constraints dans la documentation symfony dans validation 
+
+Ensuite toujours dans Article.php, entre private $id et private $title, en dessous de @ORM\Column, on rajoute: 
+
+@Assert\Length(min=10, max=255)
+
+On fait la même chose entre private $title et private $content, sauf que l'on enlève led max (car le content est censé être long)
+
+Entre private $content et private $image (donc pour l'image) on met en dessous de @ORM\Column :
+@Assert\Url()
+ (c'est pour demander à mettre absolument une url dans l'onglet image)
+
+ Ensuite, entre private $id et private $title, dans la paranthèse de @Assert\Length, on peut rajouter après le max=255:
+ @Assert\Length(min=10, max=255, minMessage="Votre titre est bien trop court !")
+
+ (c'est si on veut rajouter un message pezrsonnalisé)
+
+ Leçon 17: les catégories pour notre base de données 
+
+ On va créer une entité avec le terminal de Visual Studio Code
+
+ Dans le terminal il faut taper:
+
+ php bin/console make:entity 
+
+ Ensuite le terminal demande le nom de notre entité, pour notre exemple on va donc l'appeler Category
+
+ Le terminal a donc crée un fichier dans src/Entity/ qui s'appellera Category, et un autre fichier dans src/Repository/ qui s'appelle CategoryRepository
+
+ Ensuite le terminal demande le nom d'une colonne de Catégory (le nom de la propriété), en premier nous allons mettre title pour le titre
+
+ Ensuite le terminal demande le type de la proriété title, on va mettre string (l'équivalent de varchar)
+
+ Puis il demande la taille du string, on va le laisser à 255
+
+ Ensuite le terminal demande si le champ peut être null, pour cet exercice on va dire non 
+
+ Ensuite le terminal demande si on veut ajouter une autre propirété et d'écrire le nom de la nouvelle propriété, on va nommer la nouvelle propriété description
+
+ On va lui donner comme type le type text car les descriptions peuvent être très longue
+
+ On va dire également la propriété peut être null
+
+ Ensuite nous allons ajouter une autre propriété qui s'appelle articles
+
+ (Pour les types, en tapant ? on peut voir les différents types possibles de propirété)
+    En faisant ?, on peut voir qu'il existe des types relationelles et d'associations (relation, ManyToOne, OneToMany, ManyToMany, OneToOne)
+
+Pour notre exerice, nous allons mettre le type en relation 
+
+Après le terminal demande à quelle classe cette entité devrait être reliée, nous nous allons mettre Article 
+
+Ensuite le terminal demande le type de relation que l'on veut avec cette classe (ManyToOne, OneToMany, ManyToMany, OneToOne)
+ManyToOne: chaque catégorie n'a qu'un seul article, mais un article a plusieurs catégories
+OneToMany: chaque catégorie peut avoir plusieurs articles, chaque article n'a qu'une seule catégorie 
+ManyToMany: chaque catégorie peut avoir plusieurs articles, chaque article peut avoir plusieurs catégories
+OneToOne: chaque catégorie peut avoir qu'un seul article, chaque article peut avoir qu'une seule catégorie 
+
+Donc pour notre exercice nous allons choisir OneToMany
+
+Le terminal ensuite dit qu'il va rajouter une autre propriété dans la classe Article, nous allons choisir comme nom category 
+
+Ensuite le terminal demande si l'on peut faire en sorte que la catégorie d'un article peut être null (est-ce qu'il peut exister des articles qui n'ont pas de catégorie)
+Pour notre exercice nous allons choisir non 
+
+Après le terminal demande si un article perd sa catégorie, est-ce que l'on doit le supprimer automatiquement, nous allons dire non (/!\ fortement conseillé)
+
+Ensuite on tape entrée car nous avons terminé 
+
+Ensuite il faut fairee migrer tout ça
+
+On va donc taper dans le terminal:
+
+php bin/console make:migration 
+
+Le terminal va donc générer un nouveau fichier dans le dossier migrations 
+
+/!\ Surtout après avoir fait la migration, il faut supprimer les articles déjà crée car comme nous avons mis la catégory en not null, notre bdd risque de crasher et ça va faire plein d'erreur
+C'est pour celà que souvent il est recommandé de donner la possibilité à ce que se soit null pour éviter ce genre de problème, pour l'exercice nous avons mis null pour montrer l'erreur 
+
+Donc là on va supprimer tous les articles qui se trouvent sur la base de données dans mysql
+
+Ensuite dans le terminal, on tape: 
+php bin/console doctrine:migrations:migrate 
+
+Ensuite le terminal demande si on est sûr, on dit oui 
+
+Et ensuite dans mysql on peut retrouver la nouvelle table category, ainsi que l'id de category dans article
+
+Leçon 18: Entité commentaires
+
+Pour créer l'entité commentaires, on va taper dans la console :
+
+php bin/console make:entity
+
+Ensuite le nom de notre nouvelle entité:
+
+Comment 
+
+Le terminal a donc crée un nouveau fichier dans src/Entity/ qui s'appelle Comment, et un autre fichier dans src/Repository/ qui s'appelle CommentRepository 
+
+Ensuite le terminal demande le nom d'une nouvelle propriété; on va l'appeler author 
+
+On met en string en 255
+
+ensuite le terminal demande s'il y a une autre propriété, on va donc mettre le contenu et on va appeler ça content 
+
+On va mettre content de type text et not nullable (no)
+
+Ensuite on crée encore une autre propriété, on va l'appeler createdAt
+
+On met createdAt en datetime, et en not nullable 
+
+Ensuite pour que les commentaires soient associés aux articles, dans "And another property?" on va répondre article 
+
+Le terminal demande quel est le type d'article, on va donc refaire ? et on va taper relation (car on veut une relation entre les commentaires et les articles)
+
+Ensuite le terminal demande avec quelle classe l'entité est-elle liée, on va donc lui dire Article
+
+Le terminal demande ensuite le type de relation, on choisit donc ManyToOne (chaque commentaire est relié à un seul article, mais un article peut avoir plusieurs commentaires)
+
+Ensuite le terminal demande si Comment.article peut être null, pour l'exercice on répond non 
+
+Le terminal demande ensuite si on veut ajouter une nouvelle propriété à Article qui permet d'accéder directement aux commentaires quand on va sur un article, du coup on réponds yes
+
+Le terminal propose par défaut d'appeler le nouveau champ comments, du coup on l'appelle comments
+
+Après, le terminal demande si on veut supprimer automatiquement les commentaires orphelins, on répond yes 
+
+Ensuite comme on a terminé, on appuie sur Entrée 
+
+Le terminal va donc mettre à jour le fichier Article et le fichier Comment qui sont dans Entity 
+
+Sur le terminal, on tape php bin/console make:migration 
+
+Le terminal a donc crée un fichier de migration 
+
+Puis dans le terminal on tape php bin/console doctrine:migrations:migrate , ensuite on dit yes 
+Et la base de données a été mise à jour avec les commentaires
+
+Leçon 19: fixtures et faker 
+
+Les fixtures sont des fichiers/scripts dans lesquels ont crée des jeux pour créer de fausses données pour les mettre dans la base de données
+On va utiliser la librairie faker 
+Pour cela, on va se servir de la librairie qui se trouve sur le github de fzaninotto pour Faker 
+
+Pour installer Faker, il suffit de taper sur le terminal :
+
+composer require fzaninotto/faker --dev 
+
+Ensuite dans le document ArticleFixtures qui se trouve dans le dossier src/DataFixtures/ dans la public function load(ObjectManager $manager) on rajoute ceci:
+
+public function load(ObjectManager $manager)
+{
+    $faker = Faker\Factory::create(')
+}
+
